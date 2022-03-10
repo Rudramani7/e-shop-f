@@ -5,6 +5,13 @@ import Navbar from "../components/Navbar";
 import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
 import { mobile } from "../responsive";
+import { useSelector } from "react-redux";
+import StripeCheckout from "react-stripe-checkout";
+import {userRequest} from "../requestMethods"
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+const KEY = process.env.REACT_APP_SRIPE;
 
 const Container = styled.div``;
 
@@ -154,6 +161,30 @@ const Button = styled.button`
 `;
 
 function Cart() {
+
+  const cart = useSelector(state=>state.cart);
+
+  const [stripeToken,setStripeToken]=useState(null);
+
+  const navigate = useNavigate();
+
+  const onToken=(token)=>{
+    stripeToken(token);
+  };
+
+  useEffect(()=>{
+    const makeRequest  = async ()=>{
+      try {
+        const res = await userRequest.post("/checkout/payment",{
+          tokenId: stripeToken.id,
+          amount: cart.total * 100,
+        });
+        navigate.push("/success",{data: res.data});
+      } catch  {};
+    };
+    stripeToken &&  makeRequest();
+  },[stripeToken,cart.total,navigate])
+
     return (
         <Container>
           <Navbar />
@@ -170,63 +201,39 @@ function Cart() {
             </Top>
             <Bottom>
               <Info>
-                <Product>
+                {cart.products.map(product=>(<Product>
                   <ProductDetail>
-                    <Image src="https://hips.hearstapps.com/vader-prod.s3.amazonaws.com/1614188818-TD1MTHU_SHOE_ANGLE_GLOBAL_MENS_TREE_DASHERS_THUNDER_b01b1013-cd8d-48e7-bed9-52db26515dc4.png?crop=1xw:1.00xh;center,top&resize=480%3A%2A" />
+                    <Image src={product.img}/>
                     <Details>
                       <ProductName>
-                        <b>Product:</b> JESSIE THUNDER SHOES
+                        <b>Product:</b> {product.title}
                       </ProductName>
                       <ProductId>
-                        <b>ID:</b> 93813718293
+                        <b>ID:</b> {product._id}
                       </ProductId>
-                      <ProductColor color="black" />
+                      <ProductColor color={product.color} />
                       <ProductSize>
-                        <b>Size:</b> 9
+                        <b>Size:</b> {product.size}
                       </ProductSize>
                     </Details>
                   </ProductDetail>
                   <PriceDetail>
                     <ProductAmountContainer>
                       <AddIcon />
-                      <ProductAmount>2</ProductAmount>
+                      <ProductAmount>{product.quantity}</ProductAmount>
                       <RemoveIcon />
                     </ProductAmountContainer>
-                    <ProductPrice> 900</ProductPrice>
+                    <ProductPrice>{product.price*product.quantity}</ProductPrice>
                   </PriceDetail>
-                </Product>
+                </Product>))}
                 <Hr />
-                <Product>
-                  <ProductDetail>
-                    <Image src="https://i.pinimg.com/originals/2d/af/f8/2daff8e0823e51dd752704a47d5b795c.png" />
-                    <Details>
-                      <ProductName>
-                        <b>Product:</b> HAKURA T-SHIRT
-                      </ProductName>
-                      <ProductId>
-                        <b>ID:</b> 93813718293
-                      </ProductId>
-                      <ProductColor color="gray" />
-                      <ProductSize>
-                        <b>Size:</b> M
-                      </ProductSize>
-                    </Details>
-                  </ProductDetail>
-                  <PriceDetail>
-                    <ProductAmountContainer>
-                      <AddIcon />
-                      <ProductAmount>1</ProductAmount>
-                      <RemoveIcon />
-                    </ProductAmountContainer>
-                    <ProductPrice>Rs. 500</ProductPrice>
-                  </PriceDetail>
-                </Product>
+                
               </Info>
               <Summary>
                 <SummaryTitle>ORDER SUMMARY</SummaryTitle>
                 <SummaryItem>
                   <SummaryItemText>Subtotal</SummaryItemText>
-                  <SummaryItemPrice>Rs. 550</SummaryItemPrice>
+                  <SummaryItemPrice>Rs.{cart.total}</SummaryItemPrice>
                 </SummaryItem>
                 <SummaryItem>
                   <SummaryItemText>Estimated Shipping</SummaryItemText>
@@ -238,9 +245,20 @@ function Cart() {
                 </SummaryItem>
                 <SummaryItem type="total">
                   <SummaryItemText>Total</SummaryItemText>
-                  <SummaryItemPrice>Rs. 550</SummaryItemPrice>
+                  <SummaryItemPrice>Rs.{cart.total}</SummaryItemPrice>
                 </SummaryItem>
+                <StripeCheckout
+                 name="E-shop"
+                 image=""
+                 billingAddress
+                 shippingAddress
+                 description={`your total is Rs.${cart.total}`}
+                 amount={cart.total*100}
+                 token={onToken}
+                 stripeKey={KEY}
+                 >
                 <Button>CHECKOUT NOW</Button>
+                </StripeCheckout>
               </Summary>
             </Bottom>
           </Wrapper>
